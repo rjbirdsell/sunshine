@@ -137,7 +137,7 @@ public class ForecastFragment extends Fragment {
                     try {
                         reader.close();
                     } catch (final IOException e) {
-                        Log.e(LOG_TAG, "Error closing stream ", e);
+                        Log.e(LOG_TAG, "Error closing stream", e);
                     }
                 }
             }
