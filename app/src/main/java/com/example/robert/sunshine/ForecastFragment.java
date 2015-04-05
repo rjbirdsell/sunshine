@@ -14,6 +14,10 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,14 +26,16 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Encapsulates fetching the forecast and displaying it as a {@link ListView} layout.
  */
 public class ForecastFragment extends Fragment {
 
-    private ArrayAdapter<String> mForecastAdapter;
+    public ArrayAdapter<String> mForecastAdapter;
 
     public ForecastFragment() {
     }
@@ -45,15 +51,8 @@ public class ForecastFragment extends Fragment {
                              Bundle savedInstanceState) {
 
         // Create some dummy data for the ListView.  Here's a sample weekly forecast
-        String[] data = {
-                "Mon 6/23 - Sunny - 31/17",
-                "Tue 6/24 - Foggy - 21/8",
-                "Wed 6/25 - Cloudy - 22/17",
-                "Thurs 6/26 - Rainy - 18/11",
-                "Fri 6/27 - Foggy - 21/10",
-                "Sat 6/28 - TRAPPED IN WEATHERSTATION - 23/18",
-                "Sun 6/29 - Sunny - 20/7"
-        };
+        String[] data = {"Prognosticating..."};
+        new FetchWeatherTask().execute("98107");
         List<String> weekForecast = new ArrayList<String>(Arrays.asList(data));
 
         // Now that we have some dummy forecast data, create an ArrayAdapter.
@@ -75,7 +74,7 @@ public class ForecastFragment extends Fragment {
         return rootView;
     }
 
-    public class FetchWeatherTask extends AsyncTask<String, Void, Void> {
+    public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
 
         private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
         final String BASE_FORECAST_URL = "http://api.openweathermap.org/data/2.5/forecast/daily";
@@ -84,8 +83,10 @@ public class ForecastFragment extends Fragment {
         final String UNITS_PARAM = "units";
         final String COUNT_PARAM = "cnt";
 
+        final String NUM_DAYS = "7";
+
         @Override
-        protected Void doInBackground(String... params) {
+        protected String[] doInBackground(String... params) {
 
             if (params.length == 0){
                 return null;
@@ -98,6 +99,7 @@ public class ForecastFragment extends Fragment {
 
             // Will contain the raw JSON response as a string.
             String forecastJsonStr = null;
+            String forecastArray[] = null;
 
             try {
                 // Construct the URL for the OpenWeatherMap query
@@ -107,9 +109,9 @@ public class ForecastFragment extends Fragment {
                         .appendQueryParameter(QUERY_PARAM, postalCode)
                         .appendQueryParameter(MODE_PARAM, "json")
                         .appendQueryParameter(UNITS_PARAM, "metric")
-                        .appendQueryParameter(COUNT_PARAM, "7")
+                        .appendQueryParameter(COUNT_PARAM, NUM_DAYS)
                         .build();
-                Log.v(LOG_TAG, "Built Uri: " + forecast_url.toString());
+
                 URL url = new URL(forecast_url.toString());
 
                 // Create the request to OpenWeatherMap, and open the connection
@@ -140,7 +142,9 @@ public class ForecastFragment extends Fragment {
                 }
                 forecastJsonStr = buffer.toString();
 
-                Log.v(LOG_TAG, "Forecast JSON String: " + forecastJsonStr);
+
+
+
 
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
@@ -159,7 +163,73 @@ public class ForecastFragment extends Fragment {
                     }
                 }
             }
-            return null;
+            try {
+                return getWeekForecasts(forecastJsonStr);
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error: ", e);
+                return null;
+            }
+
+        }
+
+        protected void onPostExecute(String[] data){
+            if(data != null) {
+                mForecastAdapter.clear();
+                for (String forecast : data) {
+                    mForecastAdapter.add(forecast);
+                }
+            }
+       }
+
+        protected String[] getWeekForecasts(String jsonStr) throws JSONException{
+            final String OWM_LIST = "list";
+            final String OWM_TEMP = "temp";
+            final String OWM_MAX = "max";
+            final String OWM_MIN = "min";
+            final String OWM_WEATHER = "weather";
+            final String OWM_MAIN = "main";
+
+
+            int numDays = Integer.parseInt(NUM_DAYS);
+            String[] forecastArray = new String[numDays];
+            JSONObject weatherJSON = new JSONObject(jsonStr);
+            JSONArray weatherArray = weatherJSON.getJSONArray(OWM_LIST);
+            for(int dayIndex = 0; dayIndex < numDays; dayIndex++){
+                int dayMin;
+                int dayMax;
+                String dayDate;
+                String dayDesc;
+
+                JSONObject dayForecastJSON = weatherArray.getJSONObject(dayIndex);
+                JSONObject dayTemp = dayForecastJSON.getJSONObject(OWM_TEMP);
+                dayMax = (int)Math.round(dayTemp.getDouble(OWM_MAX));
+                dayMin = (int)Math.round(dayTemp.getDouble(OWM_MIN));
+
+                JSONObject dayWeather = dayForecastJSON.getJSONArray(OWM_WEATHER)
+                        .getJSONObject(0);
+                dayDesc = dayWeather.getString(OWM_MAIN);
+
+                Locale locale = Locale.getDefault();
+                Calendar calendar = Calendar.getInstance(locale);
+                calendar.setTimeInMillis(System.currentTimeMillis());
+                if (dayIndex == 0) {
+                    dayDate = "Today";
+                } else if (dayIndex == 1) {
+                    dayDate = "Tomorrow";
+                } else {
+                    dayDate = String.format("%s %s %s",
+                            calendar.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.SHORT, locale),
+                            calendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, locale),
+                            calendar.get(Calendar.DAY_OF_MONTH));
+                }
+
+                forecastArray[dayIndex] = String.format("%s - %s - %d/%d",
+                        dayDate,
+                        dayDesc,
+                        dayMax,
+                        dayMin);
+            }
+            return forecastArray;
         }
     }
 
