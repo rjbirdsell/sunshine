@@ -1,5 +1,6 @@
 package com.example.robert.sunshine;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -11,6 +12,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
@@ -51,7 +53,7 @@ public class ForecastFragment extends Fragment {
                              Bundle savedInstanceState) {
 
         // Create some dummy data for the ListView.  Here's a sample weekly forecast
-        String[] data = {"Prognosticating..."};
+        String[] data = {getString(R.string.fetching_weather_data)};
         new FetchWeatherTask().execute("98107");
         List<String> weekForecast = new ArrayList<String>(Arrays.asList(data));
 
@@ -68,8 +70,18 @@ public class ForecastFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
         // Get a reference to the ListView, and attach this adapter to it.
-        ListView listView = (ListView) rootView.findViewById(R.id.listview_forecast);
+        final ListView listView = (ListView) rootView.findViewById(R.id.listview_forecast);
         listView.setAdapter(mForecastAdapter);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String text = mForecastAdapter.getItem(position);
+                Intent detailIntent = new Intent(getActivity(), DetailActivity.class);
+                detailIntent.putExtra(Intent.EXTRA_TEXT, text);
+                startActivity(detailIntent);
+
+            }
+        });
 
         return rootView;
     }
@@ -194,6 +206,11 @@ public class ForecastFragment extends Fragment {
             String[] forecastArray = new String[numDays];
             JSONObject weatherJSON = new JSONObject(jsonStr);
             JSONArray weatherArray = weatherJSON.getJSONArray(OWM_LIST);
+
+            Locale locale = Locale.getDefault();
+            Calendar calendar = Calendar.getInstance(locale);
+            calendar.setTimeInMillis(System.currentTimeMillis());
+
             for(int dayIndex = 0; dayIndex < numDays; dayIndex++){
                 int dayMin;
                 int dayMax;
@@ -209,9 +226,6 @@ public class ForecastFragment extends Fragment {
                         .getJSONObject(0);
                 dayDesc = dayWeather.getString(OWM_MAIN);
 
-                Locale locale = Locale.getDefault();
-                Calendar calendar = Calendar.getInstance(locale);
-                calendar.setTimeInMillis(System.currentTimeMillis());
                 if (dayIndex == 0) {
                     dayDate = "Today";
                 } else if (dayIndex == 1) {
@@ -222,6 +236,7 @@ public class ForecastFragment extends Fragment {
                             calendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, locale),
                             calendar.get(Calendar.DAY_OF_MONTH));
                 }
+                calendar.add(Calendar.DATE, 1);
 
                 forecastArray[dayIndex] = String.format("%s - %s - %d/%d",
                         dayDate,
