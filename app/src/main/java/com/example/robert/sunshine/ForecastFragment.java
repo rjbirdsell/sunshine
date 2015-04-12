@@ -1,9 +1,11 @@
 package com.example.robert.sunshine;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -54,7 +56,6 @@ public class ForecastFragment extends Fragment {
 
         // Create some dummy data for the ListView.  Here's a sample weekly forecast
         String[] data = {getString(R.string.fetching_weather_data)};
-        new FetchWeatherTask().execute("98107");
         List<String> weekForecast = new ArrayList<String>(Arrays.asList(data));
 
         // Now that we have some dummy forecast data, create an ArrayAdapter.
@@ -86,6 +87,12 @@ public class ForecastFragment extends Fragment {
         return rootView;
     }
 
+    @Override
+    public void onStart(){
+        super.onStart();
+        updateWeather();
+    }
+
     public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
 
         private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
@@ -100,10 +107,11 @@ public class ForecastFragment extends Fragment {
         @Override
         protected String[] doInBackground(String... params) {
 
-            if (params.length == 0){
+            if (params.length < 2){
                 return null;
             }
             String postalCode = params[0];
+            String units = params[1];
             // These two need to be declared outside the try/catch
             // so that they can be closed in the finally block.
             HttpURLConnection urlConnection = null;
@@ -120,7 +128,7 @@ public class ForecastFragment extends Fragment {
                 Uri forecast_url = Uri.parse(BASE_FORECAST_URL).buildUpon()
                         .appendQueryParameter(QUERY_PARAM, postalCode)
                         .appendQueryParameter(MODE_PARAM, "json")
-                        .appendQueryParameter(UNITS_PARAM, "metric")
+                        .appendQueryParameter(UNITS_PARAM, units)
                         .appendQueryParameter(COUNT_PARAM, NUM_DAYS)
                         .build();
 
@@ -248,6 +256,13 @@ public class ForecastFragment extends Fragment {
         }
     }
 
+    private void updateWeather(){
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String location = prefs.getString(getString(R.string.pref_location_key), getString(R.string.pref_location_default));
+        String units = prefs.getString(getString(R.string.pref_units_key), getString(R.string.pref_units_default));
+        new FetchWeatherTask().execute(location, units);
+    }
+
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
@@ -264,7 +279,7 @@ public class ForecastFragment extends Fragment {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_refresh) {
-            new FetchWeatherTask().execute("98107");
+            updateWeather();
             return true;
         }
 

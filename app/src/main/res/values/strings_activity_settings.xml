@@ -1,0 +1,29 @@
+<resources>
+    <string name="title_activity_settings">Settings</string>
+
+    <!-- Strings related to Settings -->
+
+    <!-- Example General settings -->
+    <string name="pref_header_general">General</string>
+
+    <string name="pref_location_title">Location</string>
+    <string name="pref_location_default">98107</string>
+    <string name="pref_location_key">location</string>
+    <string name="pref_location_summary"></string>
+
+    <string name="pref_units_title">Units</string>
+    <string name="pref_units_default">metric</string>
+    <string name="pref_units_summary"></string>
+    <string name="pref_units_key">units</string>
+
+    <string-array name="pref_units_list_titles">
+        <item>Metric</item>
+        <item>Imperial</item>
+    </string-array>
+    <string-array name="pref_units_list_values">
+        <item>metric</item>
+        <item>imperial</item>
+    </string-array>
+
+
+</resources>
