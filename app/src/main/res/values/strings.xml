@@ -5,4 +5,6 @@
     <string name="action_refresh">Refresh</string>
     <string name="title_activity_detail">Details</string>
     <string name="fetching_weather_data">Prognosticating…</string>
+    <string name="action_view_location">View Location</string>
+    <string name="action_share">Share</string>
 </resources>
